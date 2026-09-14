@@ -1,84 +1,31 @@
-# Backend, step 1: collect all the data
+# Gita — AI Guidance, Personalized to You
 
-This is the one-time job described in our architecture discussion: pull all
-18 chapters / 700 verses from a public Gita API into your own Postgres, so
-the running app never depends on that third-party API again.
+**Status:** 🚧 Early build — core backend data pipeline complete, frontend in progress.
 
-## What this uses
+A user-centric application that gives people personalized guidance drawn from the Bhagavad Gita — share what's on your mind, and get back a real verse with an explanation of what it means for your situation.
 
-Source: `https://vedicscriptures.github.io` — a static, no-auth mirror of
-the open-source `vedicscriptures/bhagavad-gita-api` dataset (same data
-`bhagavadgitaapi.in` serves). Confirmed response shapes are documented at
-the top of `src/seed/fetchGita.ts`.
+This is an early-stage solo project. Keeping this README simple for now — more detail as the build matures.
 
-## 1. Get a Postgres database
+---
 
-Anything works for now — local, Docker, or a free-tier RDS instance. Local
-via Docker if you don't have one running:
+## What's built so far
 
-```bash
-docker run --name krishna-pg -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=krishna_app -p 5432:5432 -d postgres:16
-```
+- Backend pipeline that collects and organizes Gita verse data into a proper database
+- Verses tagged by theme (fear, duty, grief, purpose, and more) to support accurate matching
+- Frontend chat interface with saved conversation history
 
-## 2. Configure
+## In progress
 
-```bash
-cp .env.example .env
-```
+- Matching a user's message to the right verse
+- Personalizing the explanation to the person asking
 
-Edit `.env` if your `DATABASE_URL` differs from the default (it matches the
-Docker command above).
+## Stack
 
-## 3. Create the tables
+`Next.js` · `TypeScript` · `Node.js` · `PostgreSQL` · `Tailwind CSS` · `Anthropic Claude API`
 
-```bash
-psql "$DATABASE_URL" -f db/schema.sql
-```
+---
 
-Note: `schema.sql` tries to enable the `pgvector` extension for the
-`embedding` column, since that column will matter in the very next phase
-(semantic search). If your Postgres doesn't have `pgvector` available yet
-(e.g. an RDS parameter group that hasn't enabled it), comment out that line
-and the `embedding` column for now — nothing in this step touches them.
-
-## 4. Install and run
-
-```bash
-npm install
-npm run seed:verses
-```
-
-This takes a few minutes (700 verses, ~120ms between requests, deliberately
-throttled — it's a free, donation-funded public API, no reason to hammer it).
-You'll see progress logged chapter by chapter.
-
-**It's safe to re-run.** Every insert is an upsert keyed on `(chapter,
-verse)`, so if it fails partway through (network hiccup, etc.) just run it
-again — it'll skip what's already there and retry what failed.
-
-## 5. Verify
-
-```sql
-SELECT count(*) FROM verses;              -- should be 700
-SELECT count(*) FROM chapters;            -- should be 18
-SELECT chapter, verse, translation
-FROM verses ORDER BY random() LIMIT 5;    -- spot-check a few
-```
-
-## What's NOT done yet (on purpose)
-
-- **`themes`** — empty array on every row. That's the next piece: tagging
-  each verse with a small set of themes (fear, grief, duty, anger, etc.) so
-  retrieval can filter before it ranks.
-- **`embedding`** — null on every row. That's the piece after that: running
-  each verse's translation through an embedding model and storing the
-  vector, which is what makes semantic matching possible.
-- **`/api/counsel` route** — doesn't exist yet. That's what will eventually
-  replace `matchVerse()` in the frontend.
-
-Each of those is a separate, focused piece of work — worth doing one at a
-time rather than all at once, so we can sanity-check the data itself before
-building retrieval logic on top of it.
+*More to come as this takes shape.*
 
 ## A licensing note, since this pulls someone else's dataset
 
